@@ -264,7 +264,9 @@ add_composertool() {
   fi
 }
 
-# Function to get PHP version in semver format.
+# Function to get versions of PHP binaries in semver format.
 php_semver() {
-  php"$version" -v | grep -Eo -m 1 "[0-9]+\.[0-9]+\.[0-9]+" | head -n 1
+  binary=${1:-"php$version"}
+  arg=${2:-'-v'}
+  "$binary" "$arg" | grep -Eo -m 1 "[0-9]+\.[0-9]+\.[0-9]+" | head -n 1
 }

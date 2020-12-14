@@ -1054,7 +1054,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.customPackage = exports.scriptTool = exports.scriptExtension = exports.joins = exports.getCommand = exports.getUnsupportedLog = exports.suppressOutput = exports.getExtensionPrefix = exports.CSVArray = exports.extensionArray = exports.writeScript = exports.readScript = exports.addLog = exports.stepLog = exports.log = exports.color = exports.asyncForEach = exports.parseVersion = exports.fetch = exports.getInput = exports.readEnv = void 0;
+exports.customPackage = exports.scriptTool = exports.scriptExtension = exports.joins = exports.getCommand = exports.getUnsupportedLog = exports.suppressOutput = exports.getExtensionPrefix = exports.CSVArray = exports.packageArray = exports.writeScript = exports.readScript = exports.addLog = exports.stepLog = exports.log = exports.color = exports.asyncForEach = exports.parseVersion = exports.fetch = exports.getInput = exports.readEnv = void 0;
 const fs = __importStar(__webpack_require__(747));
 const https = __importStar(__webpack_require__(211));
 const path = __importStar(__webpack_require__(622));
@@ -1247,18 +1247,18 @@ exports.writeScript = writeScript;
 /**
  * Function to break extension csv into an array
  *
- * @param extension_csv
+ * @param package_csv
  */
-async function extensionArray(extension_csv) {
-    switch (extension_csv) {
+async function packageArray(package_csv) {
+    switch (package_csv) {
         case '':
         case ' ':
             return [];
         default:
-            return extension_csv
+            return package_csv
                 .split(',')
-                .map(function (extension) {
-                return extension
+                .map(function (package_name) {
+                return package_name
                     .trim()
                     .toLowerCase()
                     .replace(/^php[-_]/, '');
@@ -1266,7 +1266,7 @@ async function extensionArray(extension_csv) {
                 .filter(Boolean);
     }
 }
-exports.extensionArray = extensionArray;
+exports.packageArray = packageArray;
 /**
  * Function to break csv into an array
  *
@@ -2312,6 +2312,78 @@ module.exports = require("events");
 
 /***/ }),
 
+/***/ 615:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.addSAPI = exports.getSapiList = void 0;
+const utils = __importStar(__webpack_require__(163));
+async function getSapiList(sapi_csv) {
+    const sapi_list = await utils.packageArray(sapi_csv);
+    const servers = sapi_list.filter(sapi => /.*:.*/.test(sapi));
+    return [servers[servers.length - 1]].concat(sapi_list.filter(sapi => /.*[^:].*/.test(sapi)));
+}
+exports.getSapiList = getSapiList;
+/**
+ * Function to set sapi
+ *
+ * @param sapi_csv
+ * @param os_version
+ */
+async function addSAPI(sapi_csv, os_version) {
+    let script = '\n' + (await utils.stepLog('Setup SAPI', os_version));
+    let sapi_list;
+    switch (true) {
+        case sapi_csv.split(':').length - 1 > 1:
+            sapi_list = await getSapiList(sapi_csv);
+            script +=
+                '\n' +
+                    utils.log('Multiple SAPI with web servers specified, choosing the last one ' +
+                        sapi_list[0], os_version, 'warning');
+            break;
+        default:
+            sapi_list = await utils.packageArray(sapi_csv);
+    }
+    await utils.asyncForEach(sapi_list, async function (sapi) {
+        sapi = sapi.toLowerCase();
+        switch (os_version) {
+            case 'linux':
+            case 'darwin':
+                script += '\nadd_sapi ' + sapi;
+                break;
+            case 'win32':
+                script += '\nAdd-Sapi ' + sapi;
+                break;
+        }
+    });
+    return script;
+}
+exports.addSAPI = addSAPI;
+
+
+/***/ }),
+
 /***/ 622:
 /***/ (function(module) {
 
@@ -2582,6 +2654,7 @@ const core = __importStar(__webpack_require__(470));
 const config = __importStar(__webpack_require__(641));
 const coverage = __importStar(__webpack_require__(635));
 const extensions = __importStar(__webpack_require__(911));
+const sapi = __importStar(__webpack_require__(615));
 const tools = __importStar(__webpack_require__(534));
 const utils = __importStar(__webpack_require__(163));
 /**
@@ -2600,7 +2673,11 @@ async function getScript(filename, version, os_version) {
     const ini_values_csv = await utils.getInput('ini-values', false);
     const coverage_driver = await utils.getInput('coverage', false);
     const tools_csv = await utils.getInput('tools', false);
+    const sapi_csv = await utils.getInput('sapi', false);
     let script = await utils.readScript(filename);
+    if (sapi_csv) {
+        script += await sapi.addSAPI(sapi_csv, os_version);
+    }
     script += await tools.addTools(tools_csv, version, os_version);
     if (extension_csv) {
         script += await extensions.addExtension(extension_csv, version, os_version);
@@ -2894,7 +2971,7 @@ const utils = __importStar(__webpack_require__(163));
  * @param version
  */
 async function addExtensionDarwin(extension_csv, version) {
-    const extensions = await utils.extensionArray(extension_csv);
+    const extensions = await utils.packageArray(extension_csv);
     let add_script = '\n';
     let remove_script = '';
     await utils.asyncForEach(extensions, async function (extension) {
@@ -2960,7 +3037,7 @@ exports.addExtensionDarwin = addExtensionDarwin;
  * @param version
  */
 async function addExtensionWindows(extension_csv, version) {
-    const extensions = await utils.extensionArray(extension_csv);
+    const extensions = await utils.packageArray(extension_csv);
     let add_script = '\n';
     let remove_script = '';
     await utils.asyncForEach(extensions, async function (extension) {
@@ -3037,7 +3114,7 @@ exports.addExtensionWindows = addExtensionWindows;
  * @param version
  */
 async function addExtensionLinux(extension_csv, version) {
-    const extensions = await utils.extensionArray(extension_csv);
+    const extensions = await utils.packageArray(extension_csv);
     let add_script = '\n';
     let remove_script = '';
     await utils.asyncForEach(extensions, async function (extension) {
