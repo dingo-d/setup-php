@@ -25,17 +25,17 @@ add_couchbase_libs() {
 
 # Function to add couchbase.
 add_couchbase() {
-  add_couchbase_libs >/dev/null 2>&1
+  add_couchbase_libs 
   enable_extension "couchbase" "extension"
   if check_extension "couchbase"; then
     add_log "${tick:?}" "couchbase" "Enabled"
   else
     if [[ ${version:?} =~ 5.6|7.[0-1] ]]; then
-      pecl_install couchbase-2.6.2 >/dev/null 2>&1
+      pecl_install couchbase-2.6.2 
     elif [[ ${version:?} =~ 7.2 ]]; then
-      pecl_install couchbase-3.0.4 >/dev/null 2>&1
+      pecl_install couchbase-3.0.4 
     else
-      pecl_install couchbase >/dev/null 2>&1
+      pecl_install couchbase 
     fi
     add_extension_log "couchbase" "Installed and enabled"
   fi

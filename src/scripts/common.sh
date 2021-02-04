@@ -88,7 +88,7 @@ self_hosted_setup() {
       add_log "$cross" "PHP" "PHP $version is not supported on self-hosted runner"
       exit 1
     else
-      self_hosted_helper >/dev/null 2>&1
+      self_hosted_helper 
     fi
   fi
 }
@@ -106,7 +106,7 @@ check_extension() {
 # Function to enable existing extensions.
 enable_extension() {
   if [ -e /tmp/setup_php_dismod ] && grep -q "$1" /tmp/setup_php_dismod; then
-    sudo phpenmod -v "$version" "$1" >/dev/null 2>&1
+    sudo phpenmod -v "$version" "$1" 
   fi
   if ! check_extension "$1" && [ -e "${ext_dir:?}/$1.so" ]; then
     echo "$2=${ext_dir:?}/$1.so" | sudo tee -a "${pecl_file:-${ini_file[@]}}" >/dev/null
@@ -126,13 +126,13 @@ configure_php() {
 configure_pecl() {
   if ! [ -e /tmp/pecl_config ]; then
     if ! command -v pecl >/dev/null || ! command -v pear >/dev/null; then
-      add_pecl >/dev/null 2>&1
+      add_pecl 
     fi
     for script in pear pecl; do
       sudo "$script" config-set php_ini "${pecl_file:-${ini_file[@]}}"
       sudo "$script" channel-update "$script".php.net
     done
-    echo '' | sudo tee /tmp/pecl_config >/dev/null 2>&1
+    echo '' | sudo tee /tmp/pecl_config 
   fi
 }
 
@@ -152,8 +152,8 @@ get_pecl_version() {
 # Function to install PECL extensions and accept default options
 pecl_install() {
   local extension=$1
-  configure_pecl >/dev/null 2>&1
-  yes '' 2>/dev/null | sudo pecl install -f "$extension" >/dev/null 2>&1
+  configure_pecl 
+  yes '' 2>/dev/null | sudo pecl install -f "$extension" 
 }
 
 # Function to setup pre-release extensions using PECL.
@@ -224,12 +224,12 @@ add_tool() {
       sudo sed -i 's/\r$//; s/exit(9)/exit(0)/' "$tool_path" 2>/dev/null ||
       sudo sed -i '' 's/\r$//; s/exit(9)/exit(0)/' "$tool_path"
     elif [ "$tool" = "phan" ]; then
-      add_extension fileinfo extension >/dev/null 2>&1
-      add_extension ast extension >/dev/null 2>&1
+      add_extension fileinfo extension 
+      add_extension ast extension 
     elif [ "$tool" = "phive" ]; then
-      add_extension curl extension >/dev/null 2>&1
-      add_extension mbstring extension >/dev/null 2>&1
-      add_extension xml extension >/dev/null 2>&1
+      add_extension curl extension 
+      add_extension mbstring extension 
+      add_extension xml extension 
     elif [ "$tool" = "wp-cli" ]; then
       sudo cp -p "$tool_path" "$tool_path_dir"/wp
     fi
@@ -254,7 +254,7 @@ add_composertool() {
     fi
   fi
   (
-    composer global require "$prefix$release" >/dev/null 2>&1 &&
+    composer global require "$prefix$release"  &&
     json=$(grep "$prefix$tool" "$composer_json") &&
     tool_version=$(get_tool_version 'echo' "$json") &&
     add_log "$tick" "$tool" "Added $tool $tool_version"
